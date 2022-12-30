@@ -1,19 +1,27 @@
-node{
-  def app
-
+node {
+    def registryProjet='registry.gitlab.com/p5512/jenkins2'
+    def IMAGE="${registryProjet}:version-${env.BUILD_ID}"
     stage('Clone') {
-        checkout scm
+          git 'https://github.com/priximmo/jbuild.git'
     }
 
-    stage('Build image') {
-        app = docker.build("xavki/nginx")
+    def img = stage('Build') {
+          docker.build("$IMAGE",  '.')
     }
 
-    stage('Test image') {
-        docker.image('xavki/nginx').withRun('-p 80:80') { c ->
-        sh 'docker ps'
-        sh 'curl localhost'
-	     }
+    stage('Run') {
+          img.withRun("--name run-$BUILD_ID -p 80:80") { c ->
+            sh 'curl localhost'
+          }
     }
+
+    stage('Push') {
+          docker.withRegistry('https://registry.gitlab.com', 'reg5') {
+              img.push 'latest'
+              img.push()
+          }
+    }
+
+
 }
 
